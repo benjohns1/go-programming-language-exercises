@@ -26,7 +26,10 @@ var (
 func main() {
 	const (
 		xmin, ymin, xmax, ymax = -2, -2, +2, +2
+		ydiff, xdiff           = ymax - ymin, xmax - xmin
 		width, height          = 1024, 1024
+		supersample            = 3
+		subwidth, subheight    = width * supersample, height * supersample
 		iterations             = 100
 		multiplier             = 64
 		maxColorRange          = float64(iterations*multiplier) / 4
@@ -35,19 +38,30 @@ func main() {
 	m := mandelbrot.Mandelbrot{Iterations: iterations}
 
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
-	for py := 0; py < height; py++ {
-		y := float64(py)/height*(ymax-ymin) + ymin
-		for px := 0; px < width; px++ {
-			x := float64(px)/width*(xmax-xmin) + xmin
-			z := complex(x, y)
-			v := m.Factorial(z)
+	for py := 0; py < subheight; py += supersample {
+		var ys []float64
+		for i := 0; i < supersample; i++ {
+			ys = append(ys, float64(py+i)/subheight*ydiff+ymin)
+		}
+		for px := 0; px < subwidth; px += supersample {
+			var allVals uint32
+			allIn := true
+			for i := 0; i < supersample; i++ {
+				x := float64(px+i)/subwidth*xdiff + xmin
+				for _, y := range ys {
+					v := m.Factorial(x, y)
+					allIn = allIn && v.In
+					allVals += uint32(v.N)
+				}
+			}
 			var c color.Color
-			if v.In {
+			if allIn {
 				c = color.Black
 			} else {
-				c = g.FloatToColor(float64(v.N * multiplier))
+				floatVal := float64(allVals) / float64(supersample*supersample)
+				c = g.FloatToColor(float64(floatVal * multiplier))
 			}
-			img.Set(px, py, c)
+			img.Set(px/supersample, py/supersample, c)
 		}
 	}
 	png.Encode(os.Stdout, img)

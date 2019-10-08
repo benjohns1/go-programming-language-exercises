@@ -14,7 +14,8 @@ type Mandelbrot struct {
 }
 
 // Factorial returns the Value at a location
-func (m *Mandelbrot) Factorial(z complex128) Value {
+func (m *Mandelbrot) Factorial(x, y float64) Value {
+	z := complex(x, y)
 	var v complex128
 	for n := uint16(0); n < m.Iterations; n++ {
 		v = v*v + z
